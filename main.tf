@@ -22,6 +22,13 @@ resource "libvirt_volume" "fedora-vol" {
   pool           = libvirt_pool.vm-pool.name
 }
 
+resource "libvirt_volume" "empty-vol" {
+  count          = 4
+  name           = "empty-${count.index}"
+  pool           = libvirt_pool.vm-pool.name
+  format         = "qed"
+}
+
 data "template_file" "user_data" {
   template = file("${path.module}/cloud-init.cfg")
 }
@@ -47,6 +54,10 @@ resource "libvirt_domain" "kube-master" {
     volume_id = libvirt_volume.fedora-vol[count.index].id
   }
 
+  disk {
+    volume_id = libvirt_volume.empty-vol[count.index].id
+  }
+
   network_interface {
     network_name = "default"
   }
@@ -63,6 +74,10 @@ resource "libvirt_domain" "kubelet" {
 
   disk {
     volume_id = libvirt_volume.fedora-vol[count.index + length(libvirt_domain.kube-master)].id
+  }
+
+  disk {
+    volume_id = libvirt_volume.empty-vol[count.index + length(libvirt_domain.kube-master)].id
   }
 
   network_interface {
